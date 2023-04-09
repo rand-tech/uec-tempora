@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import './App.css';
-import { courseData } from "./CourseData";
+import courseDataJson from "./CourseData.json";
 import Select, { ActionMeta } from 'react-select';
 import { Course } from "./Models";
 import {
@@ -9,6 +9,8 @@ import {
   StyledCourseItem
 } from "./styledComponents";
 import { StyledCourseGrid } from "./styledComponents";
+
+const courseData = courseDataJson as Course[];
 
 interface Option {
   value: string;
