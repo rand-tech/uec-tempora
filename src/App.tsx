@@ -9,6 +9,7 @@ import {
   StyledCourseItem
 } from "./styledComponents";
 import { StyledCourseGrid } from "./styledComponents";
+import CourseExport from "./CourseExport";
 
 const courseData = courseDataJson as Course[];
 
@@ -185,39 +186,6 @@ function App() {
     setSelectedCourses(updatedCourses);
   };
 
-  const exportCoursesToCSV = (courses: Course[]) => {
-    const headers = [
-      'course_schedule_day_and_period',
-      'course_schedule_timetable_code',
-      'course_title_ja',
-      'course_title_en',
-      'code',
-      'lecture_name'
-    ];
-
-    const csvContent =
-      headers.join(',') +
-      '\n' +
-      selectedCourses
-        .map((course) =>
-          [
-            course.course_schedule_day_and_period,
-            course.course_schedule_timetable_code,
-            course.course_title_ja,
-            course.course_title_en,
-            course.code,
-            course.lecturer_name,
-          ].join(',')
-        )
-        .join('\n');
-    navigator.clipboard.writeText(csvContent)
-      .then(() => {
-        console.log("Copied text to clipboard");
-      })
-      .catch((err) => {
-        console.error("Failed to copy text: ", err);
-      });
-  };
 
   return (
     <>
@@ -371,8 +339,7 @@ function App() {
           </CourseDetails>
         )}
       </CourseList>
-
-      <button onClick={() => exportCoursesToCSV(courseList)}>Copy the table to clipboard</button>
+      <CourseExport selectedCourses={selectedCourses} />
     </>
   );
 }

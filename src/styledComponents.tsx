@@ -1,5 +1,30 @@
 import styled from "styled-components";
 import CourseGridComponent from "./CourseGrid";
+const ExportButtonsContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+  justify-content: left;
+  margin-bottom: 20px;
+`;
+const ExportButton = styled.button`
+  background-color: #f5f5f5;
+  border: none;
+  text-align: left;
+  text-decoration: none;
+  display: inline-block;
+  margin: 4px 2px;
+  margin-right: 10px;
+  cursor: pointer;
+  padding: 10px 24px;
+  outline: 1px solid #e5e5e5;
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+  }
+  &:active {
+    background-color: rgba(0, 0, 0, 0.25);
+  }
+`;
 
 const CourseListContainer = styled.ul`
   list-style: none;
@@ -93,6 +118,8 @@ const CourseDetails = styled.div`
   }
 `;
 export {
+  ExportButton,
+  ExportButtonsContainer,
   CourseListContainer,
   CourseListItem,
   CourseTable,
