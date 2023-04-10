@@ -8,6 +8,7 @@ import {
   CourseList,
   StyledCourseItem
 } from "./styledComponents";
+import { NativeSelect, MultiFilterSelect } from './components/FilterSelect';
 import { StyledCourseGrid } from "./styledComponents";
 import CourseExport from "./CourseExport";
 
@@ -190,95 +191,48 @@ function App() {
   return (
     <>
       <div className="filters">
-        <label>
-          Term:
-          <select
-            value={courseTermFilter}
-            onChange={(e) => setCourseTermFilter(e.target.value || undefined)}
-          >
-            <option value="">All</option>
-            {uniqueTerms.map((term) => (
-              <option key={term} value={term}>
-                {term}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Opening Term:
-          <select
-            value={courseOpeningTermFilter}
-            onChange={(e) => setCourseOpeningTermFilter(e.target.value || undefined)}
-          >
-            <option value="">All</option>
-            {uniqueOpeningTerms.map((term) => (
-              <option key={term} value={term}>
-                {term}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Academic Year:
-          <select
-            value={courseAcademicYearFilter}
-            onChange={(e) => setCourseAcademicYearFilter(e.target.value || undefined)}
-          >
-            <option value="">All</option>
-            {uniqueAcademicYears.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-        </label>
-        <br />
-        <label>
-          Faculty:
-          <Select
-            isMulti
-            styles={customStyles}
-            value={facultyFilter.map((faculty) => ({ value: faculty, label: faculty })) as Option[]}
-            onChange={(selected: ReadonlyArray<Option>, _actionMeta: ActionMeta<Option>) => {
-              const selectedValues = selected || [];
-              setFacultyFilter(selectedValues.map((item) => item.value));
-            }}
-            options={uniqueFaculties.map((faculty) => ({ value: faculty, label: faculty })) as Option[]}
-          />
-          <button onClick={handleFacultySelectAll}>Select all</button>
-          <button onClick={handleFacultyClear}>Clear</button>
-        </label>
-        <label>
-          Category:
-          <Select
-            isMulti
-            styles={customStyles}
-            value={categoryFilter.map((category) => ({ value: category, label: category })) as Option[]}
-            onChange={(selected: ReadonlyArray<Option>, _actionMeta: ActionMeta<Option>) => {
-              const selectedValues = selected || [];
-              setCategoryFilter(selectedValues.map((item) => item.value));
-            }}
-            options={uniqueCategories.map((category) => ({ value: category, label: category })) as Option[]}
-          />
-          <button onClick={handleCategorySelectAll}>Select all</button>
-          <button onClick={handleCategoryClear}>Clear</button>
-        </label>
-
-        <label>
-          Department:
-          <Select
-            isMulti
-            styles={customStyles}
-            value={departmentFilter.map((department) => ({ value: department, label: department })) as Option[]}
-            onChange={(selected: ReadonlyArray<Option>, _actionMeta: ActionMeta<Option>) => {
-              const selectedValues = selected || [];
-              setDepartmentFilter(selectedValues.map((item) => item.value));
-            }}
-            options={uniqueDepartments.map((department) => ({ value: department, label: department })) as Option[]}
-          />
-          <button onClick={handleDepartmentSelectAll}>Select all</button>
-          <button onClick={handleDepartmentClear}>Clear</button>
-        </label>
+        <NativeSelect
+          label="Term"
+          value={courseTermFilter}
+          options={uniqueTerms}
+          onChange={(value) => setCourseTermFilter(value)}
+        />
+        <NativeSelect
+          label="Opening Term"
+          value={courseOpeningTermFilter}
+          options={uniqueOpeningTerms}
+          onChange={(value) => setCourseOpeningTermFilter(value)}
+        />
+        <NativeSelect
+          label="Academic Year"
+          value={courseAcademicYearFilter}
+          options={uniqueAcademicYears.sort()}
+          onChange={(value) => setCourseAcademicYearFilter(value)}
+        />
+        <MultiFilterSelect
+          label="Faculty"
+          value={facultyFilter}
+          options={uniqueFaculties}
+          onSelectAll={handleFacultySelectAll}
+          onClear={handleFacultyClear}
+          onChange={(selected) => setFacultyFilter(selected)}
+        />
+        <MultiFilterSelect
+          label="Category"
+          value={categoryFilter}
+          options={uniqueCategories}
+          onSelectAll={handleCategorySelectAll}
+          onClear={handleCategoryClear}
+          onChange={(selected) => setCategoryFilter(selected)}
+        />
+        <MultiFilterSelect
+          label="Department"
+          value={departmentFilter}
+          options={uniqueDepartments}
+          onSelectAll={handleDepartmentSelectAll}
+          onClear={handleDepartmentClear}
+          onChange={(selected) => setDepartmentFilter(selected)}
+        />
       </div>
 
       <StyledCourseGrid
