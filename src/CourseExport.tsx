@@ -194,10 +194,80 @@ END:VEVENT`;
         saveAs(blob, `UEC-Tempora-timetable-${new Date().toISOString().replace(/[:]/g, "").slice(0, 15)}.ics`);
     };
 
+    const exportBookmark = () => {
+
+        const header = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- This is an automatically generated file.
+     It will be read and overwritten.
+     DO NOT EDIT! -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+`;
+        const extractUrls = (text: string) => {
+            const urlRegex = /https?:\/\/[^\s]+/g;
+            return text.match(urlRegex) || [];
+        };
+        const generateBookmarkPath = (course: Course) => {
+            const year = getJapaneseCalendarYear();
+            const _path = generateFolderPath(course);
+            const yearTerm = _path.split("/")[0]; // 2021-1
+            const path = _path.split("/").slice(1, -1).join("/");
+            return { year, path, yearTerm };
+        }
+        const bookmarks = selectedCourses.map((course) => {
+            const { year, path, yearTerm } = generateBookmarkPath(course);
+            const yearTermFolderStart = `    <DT><H3 ADD_DATE="0" LAST_MODIFIED="0">${yearTerm}</H3>\n    <DL><p>`;
+            const folderStart = `        <DT><H3 ADD_DATE="0" LAST_MODIFIED="0">${path}</H3>\n        <DL><p>`;
+            const folderEnd = "        </DL><p>";
+            const yearTermFolderEnd = "    </DL><p>";
+
+            const syllabusUrl = `https://kyoumu.office.uec.ac.jp/syllabus/${year}/31/31_${course.course_schedule_timetable_code}.html`;
+            const createGoogleSearchUrl = (course: Course) => {
+                const query = encodeURIComponent(`("${course.course_title_ja}" OR "${course.course_title_en}") ${course.lecturer_name} site:uec.ac.jp`);
+                return {
+                    url: `https://www.google.com/search?q=${query}`,
+                    title: "Google Search",
+                };
+            };
+            const createTwitterSearchUrl = (course: Course) => {
+                const query = encodeURIComponent(`(${course.course_title_ja} OR ${course.course_title_en})`);
+                return {
+                    url: `https://twitter.com/search?q=${query}&pf=on`, title: "Twitter Search",
+                };
+            };
+            const urls = [
+                ...extractUrls(course.offering_course_website).map((url) => ({ url, title: "Course Website" })),
+                { url: syllabusUrl, title: "Public Syllabus" },
+                createGoogleSearchUrl(course),
+                createTwitterSearchUrl(course),
+            ];
+
+            const bookmarks = urls.map(
+                ({ url, title }) =>
+                    `            <DT><A HREF="${url}" ADD_DATE="0" LAST_VISIT="0" LAST_MODIFIED="0">${title}</A>`
+            );
+
+
+            return `${yearTermFolderStart}\n${folderStart}${bookmarks.join("\n")}\n${folderEnd}\n${yearTermFolderEnd}`;
+        });
+
+        const footer = `\n</DT></DL><p>`;
+
+        const bookmarkHTMLContent = `${header}${bookmarks.join("\n")}${footer}`;
+
+
+        setExportResult(bookmarkHTMLContent);
+        const blob = new Blob([bookmarkHTMLContent], { type: "text/html;charset=utf-8" });
+        saveAs(blob, "UEC-Tempora-bookmarks-" + new Date().toISOString().replace(/[:]/g, "").replace(/T\d{2}/g, "-").slice(0, 15) + ".html");
+    };
+
     return (
         <>
             <ExportButtonsContainer>
                 <ExportButton onClick={exportShellScript}>Export as Shell Script</ExportButton>
+                <ExportButton onClick={exportBookmark}>Download Bookmark File</ExportButton>
                 <ExportButton onClick={exportICS}>Download Calendar File</ExportButton>
                 <ExportButton onClick={() => exportTable("\t")}>Export as TSV</ExportButton>
             </ExportButtonsContainer>
