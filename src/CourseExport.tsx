@@ -4,8 +4,6 @@ import { Course } from "./Models";
 import { ExportButton, ExportButtonsContainer } from "./styledComponents";
 import { saveAs } from "file-saver";
 
-
-
 const ExportResult = styled.pre`
   background-color: #f5f5f5;
   padding: 10px;
@@ -57,7 +55,7 @@ const getJapaneseCalendarYear = () => {
     const date = new Date();
     const year = date.getFullYear();
     const month = date.getMonth();
-    if (month <= 3) {
+    if (month < 3) {
         return year - 1;
     }
     return year;
@@ -84,7 +82,7 @@ const CourseExport: React.FC<CourseExportProps> = ({ selectedCourses }) => {
 
         const quarter = quarterMap[course.course_schedule_term[0]] || "";
         const quarterDelimiter = quarter !== "" ? "-" : "";
-        const dayAndPeriod = course.course_schedule_day_and_period[0].replace(/:/g, ".");
+        const dayAndPeriod = course.course_schedule_day_and_period[0].split(":").map((s) => parseInt(s) + 1).join(".");
         const titleEnStripped = greekToAscii(
             course.course_title_en.toLowerCase().replace(/[_\s,."'}{\/\\・¥-]+/g, "-")
         );
@@ -153,6 +151,7 @@ const CourseExport: React.FC<CourseExportProps> = ({ selectedCourses }) => {
             "4": { start: "161500", end: "174500" },
         };
 
+        const timeZone = "Asia/Tokyo";  
         const getEventDate = (baseDate: Date, dayOffset: number, time: string) => {
             const eventDate = new Date(baseDate);
 
@@ -160,7 +159,16 @@ const CourseExport: React.FC<CourseExportProps> = ({ selectedCourses }) => {
             eventDate.setHours(parseInt(time.substring(0, 2), 10));
             eventDate.setMinutes(parseInt(time.substring(2, 4), 10));
             eventDate.setSeconds(parseInt(time.substring(4, 6), 10));
-            return eventDate.toISOString().replace(/[-:]/g, "").slice(0, 15);
+
+            return eventDate.toLocaleString('ja-JP', {
+                timeZone,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+            }).replace(" ", "T").replace(/[-:/]/g, "").slice(0, 15);
         };
         const constExportICS = () => {
             const icsHeader = "BEGIN:VCALENDAR\nCALSCALE:GREGORIAN\nVERSION:2.0\n";
@@ -172,12 +180,11 @@ const CourseExport: React.FC<CourseExportProps> = ({ selectedCourses }) => {
                     const [day, period] = dayAndPeriod.split(":");
                     const startDate = getEventDate(baseDate, parseInt(day, 10), timeTablePeriod[period].start);
                     const endDate = getEventDate(baseDate, parseInt(day, 10), timeTablePeriod[period].end);
-
                     return `BEGIN:VEVENT
 SUMMARY:${course.course_title_ja} (${course.course_title_en})
-DESCRIPTION:Instructor: ${course.lecturer_name}\\nCode: ${course.code}\\nTimetable Code: ${course.course_schedule_timetable_code}
-DTSTART:${startDate}
-DTEND:${endDate}
+DESCRIPTION:Instructor: ${course.lecturer_name}\\nCode: ${course.code}\\n## Course Website:\\n${course.offering_course_website}
+DTSTART;TZID=${timeZone}:${startDate}
+DTEND;TZID=${timeZone}:${endDate}
 RRULE:FREQ=WEEKLY;COUNT=15
 END:VEVENT`;
                 })
@@ -185,7 +192,7 @@ END:VEVENT`;
 
             const icsContent = icsHeader + events.join("\n") + icsFooter;
             return icsContent;
-        }
+        };
         const icsContent = constExportICS();
 
         setExportResult(icsContent);
@@ -195,7 +202,6 @@ END:VEVENT`;
     };
 
     const exportBookmark = () => {
-
         const header = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
 <!-- This is an automatically generated file.
      It will be read and overwritten.
@@ -210,20 +216,14 @@ END:VEVENT`;
             return text.match(urlRegex) || [];
         };
         const generateBookmarkPath = (course: Course) => {
-            const year = getJapaneseCalendarYear();
             const _path = generateFolderPath(course);
-            const yearTerm = _path.split("/")[0]; // 2021-1
+            const yearTerm = _path.split("/")[0]; 
             const path = _path.split("/").slice(1, -1).join("/");
-            return { year, path, yearTerm };
-        }
-        const bookmarks = selectedCourses.map((course) => {
-            const { year, path, yearTerm } = generateBookmarkPath(course);
-            const yearTermFolderStart = `    <DT><H3 ADD_DATE="0" LAST_MODIFIED="0">${yearTerm}</H3>\n    <DL><p>`;
-            const folderStart = `        <DT><H3 ADD_DATE="0" LAST_MODIFIED="0">${path}</H3>\n        <DL><p>`;
-            const folderEnd = "        </DL><p>";
-            const yearTermFolderEnd = "    </DL><p>";
+            return { path, yearTerm };
+        };
 
-            const syllabusUrl = `https://kyoumu.office.uec.ac.jp/syllabus/${year}/31/31_${course.course_schedule_timetable_code}.html`;
+        const createUrls = (course: Course) => {
+            const syllabusUrl = `https://kyoumu.office.uec.ac.jp/syllabus/${getJapaneseCalendarYear()}/31/31_${course.course_schedule_timetable_code}.html`;
             const createGoogleSearchUrl = (course: Course) => {
                 const query = encodeURIComponent(`("${course.course_title_ja}" OR "${course.course_title_en}") ${course.lecturer_name} site:uec.ac.jp`);
                 return {
@@ -232,34 +232,47 @@ END:VEVENT`;
                 };
             };
             const createTwitterSearchUrl = (course: Course) => {
-                const query = encodeURIComponent(`(${course.course_title_ja} OR ${course.course_title_en})`);
+                const query = encodeURIComponent(
+                    `(${course.course_title_ja} OR ${course.course_title_en})`
+                );
                 return {
-                    url: `https://twitter.com/search?q=${query}&pf=on`, title: "Twitter Search",
+                    url: `https://twitter.com/search?q=${query}&pf=on`,
+                    title: "Twitter Search",
                 };
             };
-            const urls = [
-                ...extractUrls(course.offering_course_website).map((url) => ({ url, title: "Course Website" })),
+            return [
+                ...extractUrls(course.offering_course_website).map((url) => ({
+                    url,
+                    title: "Course Website",
+                })),
                 { url: syllabusUrl, title: "Public Syllabus" },
                 createGoogleSearchUrl(course),
                 createTwitterSearchUrl(course),
             ];
+        };
 
-            const bookmarks = urls.map(
-                ({ url, title }) =>
-                    `            <DT><A HREF="${url}" ADD_DATE="0" LAST_VISIT="0" LAST_MODIFIED="0">${title}</A>`
-            );
+        // Sort selectedCourses by year and term
+        const sortedCourses = selectedCourses.sort((a, b) => {
+            const aInfo = a.course_schedule_day_and_period[0].replace(/:/g, "");
+            const bInfo = b.course_schedule_day_and_period[0].replace(/:/g, "");
+            return parseInt(aInfo, 10) - parseInt(bInfo, 10);
+        });
 
+        const bookmarks = sortedCourses.map((course) => {
+            const { path, yearTerm } = generateBookmarkPath(course);
+            const yearTermFolderStart = `    <DT><H3 ADD_DATE="0" LAST_MODIFIED="0">${yearTerm}</H3>\n    <DL><p>`;
+            const folderStart = `        <DT><H3 ADD_DATE="0" LAST_MODIFIED="0">${path}</H3>\n        <DL><p>`;
+            const bookmarks = createUrls(course).map(({ url, title }) => `            <DT><A HREF="${url}" ADD_DATE="0" LAST_VISIT="0" LAST_MODIFIED="0">${title}</A>`);
+            const folderEnd = "        </DL><p>";
+            const yearTermFolderEnd = "    </DL><p>";
 
             return `${yearTermFolderStart}\n${folderStart}${bookmarks.join("\n")}\n${folderEnd}\n${yearTermFolderEnd}`;
         });
-
         const footer = `\n</DT></DL><p>`;
-
         const bookmarkHTMLContent = `${header}${bookmarks.join("\n")}${footer}`;
 
-
         setExportResult(bookmarkHTMLContent);
-        const blob = new Blob([bookmarkHTMLContent], { type: "text/html;charset=utf-8" });
+        const blob = new Blob([bookmarkHTMLContent], { type: "text/html;charset=utf-8", });
         saveAs(blob, "UEC-Tempora-bookmarks-" + new Date().toISOString().replace(/[:]/g, "").replace(/T\d{2}/g, "-").slice(0, 15) + ".html");
     };
 
