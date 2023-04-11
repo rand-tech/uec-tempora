@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import styled from "styled-components";
 import { Course } from "./Models";
 import { ExportButton, ExportButtonsContainer } from "./styledComponents";
+import { saveAs } from "file-saver";
 
 
 
@@ -52,12 +53,21 @@ function greekToAscii(str: string) {
 
     return result;
 }
+const getJapaneseCalendarYear = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    if (month <= 3) {
+        return year - 1;
+    }
+    return year;
+};
 
 const CourseExport: React.FC<CourseExportProps> = ({ selectedCourses }) => {
     const [exportResult, setExportResult] = useState("");
 
     const generateFolderPath = (course: Course) => {
-        const year = new Date().getFullYear();
+        const year = getJapaneseCalendarYear();
 
         const term =
             course.course_schedule_term.startsWith("後") ||
@@ -79,8 +89,7 @@ const CourseExport: React.FC<CourseExportProps> = ({ selectedCourses }) => {
             course.course_title_en.toLowerCase().replace(/[_\s,."'}{\/\\・¥-]+/g, "-")
         );
 
-        return `${year + term
-            }/${quarter}${quarterDelimiter}${dayAndPeriod}-${titleEnStripped}/`;
+        return `${year}-${term}/${quarter}${quarterDelimiter}${dayAndPeriod}-${titleEnStripped}/`;
     };
 
     const exportShellScript = () => {
@@ -122,7 +131,6 @@ const CourseExport: React.FC<CourseExportProps> = ({ selectedCourses }) => {
                         course.course_schedule_timetable_code,
                         course.course_title_ja,
                         course.course_title_en,
-
                         course.code,
                         course.lecturer_name,
                     ].join(delimiter)
@@ -136,11 +144,61 @@ const CourseExport: React.FC<CourseExportProps> = ({ selectedCourses }) => {
                 console.error("Failed to copy text: ", err);
             });
     };
+    const exportICS = () => {
+        const timeTablePeriod: { [key: string]: { start: string; end: string } } = {
+            "0": { start: "090000", end: "103000" },
+            "1": { start: "104000", end: "121000" },
+            "2": { start: "130000", end: "143000" },
+            "3": { start: "144000", end: "161000" },
+            "4": { start: "161500", end: "174500" },
+        };
+
+        const getEventDate = (baseDate: Date, dayOffset: number, time: string) => {
+            const eventDate = new Date(baseDate);
+
+            eventDate.setDate(baseDate.getDate() + dayOffset);
+            eventDate.setHours(parseInt(time.substring(0, 2), 10));
+            eventDate.setMinutes(parseInt(time.substring(2, 4), 10));
+            eventDate.setSeconds(parseInt(time.substring(4, 6), 10));
+            return eventDate.toISOString().replace(/[-:]/g, "").slice(0, 15);
+        };
+        const constExportICS = () => {
+            const icsHeader = "BEGIN:VCALENDAR\nCALSCALE:GREGORIAN\nVERSION:2.0\n";
+            const icsFooter = "END:VCALENDAR\n";
+            const baseDate = new Date("2023-04-10T00:00:00+09:00");
+
+            const events = selectedCourses.flatMap((course) =>
+                course.course_schedule_day_and_period.map((dayAndPeriod) => {
+                    const [day, period] = dayAndPeriod.split(":");
+                    const startDate = getEventDate(baseDate, parseInt(day, 10), timeTablePeriod[period].start);
+                    const endDate = getEventDate(baseDate, parseInt(day, 10), timeTablePeriod[period].end);
+
+                    return `BEGIN:VEVENT
+SUMMARY:${course.course_title_ja} (${course.course_title_en})
+DESCRIPTION:Instructor: ${course.lecturer_name}\\nCode: ${course.code}\\nTimetable Code: ${course.course_schedule_timetable_code}
+DTSTART:${startDate}
+DTEND:${endDate}
+RRULE:FREQ=WEEKLY;COUNT=15
+END:VEVENT`;
+                })
+            );
+
+            const icsContent = icsHeader + events.join("\n") + icsFooter;
+            return icsContent;
+        }
+        const icsContent = constExportICS();
+
+        setExportResult(icsContent);
+
+        const blob = new Blob([icsContent], { type: "text/plain;charset=utf-8" });
+        saveAs(blob, `UEC-Tempora-timetable-${new Date().toISOString().replace(/[:]/g, "").slice(0, 15)}.ics`);
+    };
 
     return (
         <>
             <ExportButtonsContainer>
                 <ExportButton onClick={exportShellScript}>Export as Shell Script</ExportButton>
+                <ExportButton onClick={exportICS}>Download Calendar File</ExportButton>
                 <ExportButton onClick={() => exportTable("\t")}>Export as TSV</ExportButton>
             </ExportButtonsContainer>
             {exportResult !== "" &&
