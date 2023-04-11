@@ -151,7 +151,7 @@ const CourseExport: React.FC<CourseExportProps> = ({ selectedCourses }) => {
             "4": { start: "161500", end: "174500" },
         };
 
-        const timeZone = "Asia/Tokyo";  
+        const timeZone = "Asia/Tokyo";
         const getEventDate = (baseDate: Date, dayOffset: number, time: string) => {
             const eventDate = new Date(baseDate);
 
@@ -170,9 +170,23 @@ const CourseExport: React.FC<CourseExportProps> = ({ selectedCourses }) => {
                 second: "2-digit",
             }).replace(" ", "T").replace(/[-:/]/g, "").slice(0, 15);
         };
+        const foldIcsContent = (icsContent: string, maxLength = 75) => {
+            const lines = icsContent.split("\n");
+            const foldedLines = lines.map(line => {
+                let foldedLine = '';
+                while (line.length > maxLength) {
+                    foldedLine += line.slice(0, maxLength) + "\n ";
+                    line = line.slice(maxLength);
+                }
+                foldedLine += line;
+                return foldedLine;
+            });
+            return foldedLines.join("\n");
+        };
+
         const constExportICS = () => {
-            const icsHeader = "BEGIN:VCALENDAR\nCALSCALE:GREGORIAN\nVERSION:2.0\n";
-            const icsFooter = "END:VCALENDAR\n";
+            const icsHeader = `BEGIN:VCALENDAR\nCALSCALE:GREGORIAN\nVERSION:2.0\nBEGIN:VTIMEZONE\nTZID:${timeZone}\nBEGIN:DAYLIGHT\nDTSTART:19500507T000000\nRRULE:FREQ=YEARLY;UNTIL=19510505T150000Z;BYMONTH=5;BYDAY=1SU\nTZNAME:JDT\nTZOFFSETFROM:+0900\nTZOFFSETTO:+1000\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:19510909T010000\nTZNAME:JST\nTZOFFSETFROM:+1000\nTZOFFSETTO:+0900\nEND:STANDARD\nEND:VTIMEZONE\n`;
+            const icsFooter = "\nEND:VCALENDAR\n";
             const baseDate = new Date("2023-04-10T00:00:00+09:00");
 
             const events = selectedCourses.flatMap((course) =>
@@ -190,7 +204,7 @@ END:VEVENT`;
                 })
             );
 
-            const icsContent = icsHeader + events.join("\n") + icsFooter;
+            const icsContent = icsHeader + foldIcsContent(events.join("\n")) + icsFooter;
             return icsContent;
         };
         const icsContent = constExportICS();
@@ -217,7 +231,7 @@ END:VEVENT`;
         };
         const generateBookmarkPath = (course: Course) => {
             const _path = generateFolderPath(course);
-            const yearTerm = _path.split("/")[0]; 
+            const yearTerm = _path.split("/")[0];
             const path = _path.split("/").slice(1, -1).join("/");
             return { path, yearTerm };
         };
