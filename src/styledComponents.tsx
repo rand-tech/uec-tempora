@@ -75,7 +75,7 @@ const StyledCourseGrid = styled(CourseGridComponent)`
 `;
 
 const StyledCourseCell = styled.td`
-  border: 1px solid black;
+  border: 1px solid #333333;
   padding: 10px;
   text-align: center;
   vertical-align: top;
