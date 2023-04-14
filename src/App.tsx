@@ -1,23 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import './App.css';
 import courseDataJson from "./CourseData.json";
-import Select, { ActionMeta } from 'react-select';
 import { Course } from "./Models";
 import {
   CourseDetails,
   CourseList,
-  StyledCourseItem
+  StyledCourseItem,
+  StyledCourseGrid
 } from "./styledComponents";
 import { NativeSelect, MultiFilterSelect } from './components/FilterSelect';
-import { StyledCourseGrid } from "./styledComponents";
 import CourseExport from "./CourseExport";
 
 const courseData = courseDataJson as Course[];
-
-interface Option {
-  value: string;
-  label: string;
-}
 
 interface CourseListPosition {
   x: number;
@@ -107,13 +101,6 @@ function App() {
     }
   }, [courseListPosition]);
 
-  const customStyles = {
-    control: (provided: any) => ({
-      ...provided,
-      width: 800,
-    }),
-  };
-
   const { uniqueFaculties, uniqueCategories, uniqueDepartments, uniqueTerms, uniqueOpeningTerms, uniqueAcademicYears } = useUniqueFilters(courseData);
 
   const { handleSelectAll: handleFacultySelectAll, handleClear: handleFacultyClear } = useFilterHandlers(
@@ -159,7 +146,7 @@ function App() {
     setCourseListVisible(true);
   }, [courseTermFilter, courseOpeningTermFilter, courseAcademicYearFilter, facultyFilter, categoryFilter, departmentFilter]);
 
-  const onCourseItemClick = useCallback((row: number, col: number, course: Course) => {
+  const onCourseItemClick = useCallback((course: Course) => {
     const courseToAddOrRemove = course;
     // Update the selected courses based on the clicked course
     setSelectedCourses((prevSelectedCourses) => {
@@ -240,7 +227,9 @@ function App() {
         onCellClick={onCellClick}
         handleCourseDeselect={handleCourseDeselect}
       />
-      <CourseList ref={courseListRef} visible={courseListVisible} style={{ left: courseListPosition.x, top: courseListPosition.y }}>
+      <CourseList ref={courseListRef} visible={courseListVisible} style={{ left: courseListPosition.x, top: courseListPosition.y }}
+        onMouseLeave={() => setHoveredCourse(null)}
+      >
         <ul>
           {courseList.map((course: Course, index) => {
             const isSelected = grid[courseListPosition.row][courseListPosition.col].some(
@@ -256,15 +245,8 @@ function App() {
               <StyledCourseItem
                 key={index}
                 isSelected={isSelected}
-                onClick={() =>
-                  onCourseItemClick(
-                    courseListPosition.row,
-                    courseListPosition.col,
-                    course
-                  )
-                }
+                onClick={() => onCourseItemClick(course)}
                 onMouseEnter={() => setHoveredCourse(course)}
-                onMouseLeave={() => setHoveredCourse(null)}
               >
                 <a
                   href={`//kyoumu.office.uec.ac.jp/syllabus/2023/31/31_${course.course_schedule_timetable_code}.html`}
@@ -273,17 +255,22 @@ function App() {
                 >
                   🌐
                 </a>
-                {course.course_title_ja} - {shortDescription}
+                {course.course_title_ja} ・ {shortDescription}
               </StyledCourseItem>
             );
           })}
         </ul>
         {hoveredCourse && (
-          <CourseDetails>
-            <h3>{hoveredCourse.course_title_ja}</h3>
+          <CourseDetails
+            onClick={() => onCourseItemClick(hoveredCourse)}
+            onMouseOver={() => setHoveredCourse(hoveredCourse)}
+          >
+            <h4>{hoveredCourse.course_title_ja}</h4>
+            <h5><i>{hoveredCourse.course_title_en}</i></h5>
             <p><strong>Credits:</strong> {hoveredCourse.offering_credits}</p>
             <p><strong>Lecturer Name:</strong> {hoveredCourse.lecturer_name}</p>
             <p><strong>Faculty:</strong> {hoveredCourse.faculty}</p>
+            <p><strong>Timetable Code:</strong> {hoveredCourse.course_schedule_timetable_code}</p>
             <p><strong>Department:</strong> {hoveredCourse.offering_department}</p>
             <p><strong>Day and Time:</strong> {hoveredCourse.course_schedule_day_and_period.map((dayAndTime) => dayAndTime).join(", ")}</p>
             <p><strong>Year Offered:</strong> {hoveredCourse.offering_year_offered.map((year) => year).join(", ")}</p>

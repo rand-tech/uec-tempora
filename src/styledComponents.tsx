@@ -108,7 +108,7 @@ const CourseDetails = styled.div`
   position: absolute;
   left: 100%;
   top: 0;
-
+  // TODO: height
   width: clamp(300px, 40%, 500px);
   background-color: white;
   outline: 1px solid black;
